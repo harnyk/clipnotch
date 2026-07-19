@@ -29,7 +29,7 @@ class AudioPlayer(QObject):
 
     def stop(self) -> None:
         self._stop_at_ms = None
-        self._player.stop()
+        self._stop_without_resetting_position()
 
     def position(self) -> int:
         return self._player.position()
@@ -37,8 +37,16 @@ class AudioPlayer(QObject):
     def is_playing(self) -> bool:
         return self._player.isPlaying()
 
+    def _stop_without_resetting_position(self) -> None:
+        # QMediaPlayer.stop() seeks back to position 0 and emits
+        # positionChanged(0); block that so callers' notion of "current
+        # position" (e.g. MainWindow.playhead_ms) isn't silently clobbered.
+        self._player.blockSignals(True)
+        self._player.stop()
+        self._player.blockSignals(False)
+
     def _on_position_changed(self, position: int) -> None:
         self.position_changed.emit(position)
         if self._stop_at_ms is not None and position >= self._stop_at_ms:
-            self._player.stop()
+            self._stop_without_resetting_position()
             self._stop_at_ms = None

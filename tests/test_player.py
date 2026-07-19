@@ -38,3 +38,15 @@ def test_play_from_clears_stop_position(qtbot, test_wav_path):
     with patch.object(player._player, "setPosition"), patch.object(player._player, "play"):
         player.play_from(100)
     assert player._stop_at_ms is None
+
+
+def test_stop_does_not_emit_position_changed(qtbot, test_wav_path):
+    # QMediaPlayer.stop() resets position to 0 and would otherwise emit
+    # positionChanged(0); callers (e.g. MainWindow) rely on stop() being
+    # silent so their own notion of "current position" isn't clobbered.
+    player = AudioPlayer()
+    player.load(test_wav_path)
+    received = []
+    player.position_changed.connect(received.append)
+    player.stop()
+    assert received == []
