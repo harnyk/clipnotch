@@ -63,3 +63,26 @@ class MarkerModel:
     def prev_marker(self, position_ms: int) -> int | None:
         candidates = [m for m in self._markers if m < position_ms]
         return max(candidates) if candidates else None
+
+    def _interval_index_containing(self, position_ms: int) -> int | None:
+        intervals = self.intervals()
+        for i, interval in enumerate(intervals):
+            if interval.start_ms <= position_ms < interval.end_ms:
+                return i
+        if position_ms == self.duration_ms and intervals:
+            return len(intervals) - 1
+        return None
+
+    def next_interval_start(self, position_ms: int) -> int | None:
+        intervals = self.intervals()
+        idx = self._interval_index_containing(position_ms)
+        if idx is None or idx + 1 >= len(intervals):
+            return None
+        return intervals[idx + 1].start_ms
+
+    def prev_interval_start(self, position_ms: int) -> int | None:
+        intervals = self.intervals()
+        idx = self._interval_index_containing(position_ms)
+        if idx is None or idx <= 0:
+            return None
+        return intervals[idx - 1].start_ms

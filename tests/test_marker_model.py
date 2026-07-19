@@ -92,3 +92,28 @@ def test_next_and_prev_marker():
     assert model.next_marker(8000) is None
     assert model.prev_marker(8000) == 7000
     assert model.prev_marker(3000) is None
+
+
+def test_next_and_prev_interval_start_covers_boundary_intervals():
+    # Intervals: [0, 3000) [3000, 7000) [7000, 10000) -- three intervals, two markers.
+    # Unlike next_marker/prev_marker, this must also reach the very first (start 0)
+    # and very last interval, which have no marker exactly at their boundary.
+    model = MarkerModel(duration_ms=10_000)
+    model.add_marker(3000)
+    model.add_marker(7000)
+
+    assert model.next_interval_start(0) == 3000
+    assert model.next_interval_start(3000) == 7000
+    assert model.next_interval_start(7000) is None
+    assert model.next_interval_start(9999) is None
+
+    assert model.prev_interval_start(7000) == 3000
+    assert model.prev_interval_start(3000) == 0
+    assert model.prev_interval_start(0) is None
+    assert model.prev_interval_start(9999) == 3000
+
+
+def test_next_and_prev_interval_start_with_no_markers():
+    model = MarkerModel(duration_ms=10_000)
+    assert model.next_interval_start(0) is None
+    assert model.prev_interval_start(0) is None
