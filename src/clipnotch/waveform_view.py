@@ -10,6 +10,7 @@ INCLUDED_COLOR = QColor(60, 160, 60)
 EXCLUDED_COLOR = QColor(120, 120, 120)
 MARKER_COLOR = QColor(220, 50, 50)
 PLAYHEAD_COLOR = QColor(240, 240, 30)
+NAV_POINT_COLOR = QColor(60, 170, 240)
 
 
 def ms_to_x(position_ms: int, duration_ms: int, width_px: int) -> int:
@@ -34,6 +35,7 @@ class WaveformView(QWidget):
         self._markers: list[int] = []
         self._intervals: list[Interval] = []
         self._playhead_ms = 0
+        self._nav_point_ms = 0
         self._zoom = 1.0
         self.setMinimumHeight(120)
         # Deliberately NoFocus (the default): MainWindow is the sole keyboard-shortcut
@@ -57,6 +59,10 @@ class WaveformView(QWidget):
 
     def set_playhead(self, position_ms: int) -> None:
         self._playhead_ms = position_ms
+        self.update()
+
+    def set_nav_point(self, position_ms: int) -> None:
+        self._nav_point_ms = position_ms
         self.update()
 
     def set_zoom(self, factor: float) -> None:
@@ -100,6 +106,10 @@ class WaveformView(QWidget):
         for marker_ms in self._markers:
             x = ms_to_x(marker_ms, self._duration_ms, width)
             painter.drawLine(x, 0, x, height)
+
+        painter.setPen(QPen(NAV_POINT_COLOR, 2))
+        nav_x = ms_to_x(self._nav_point_ms, self._duration_ms, width)
+        painter.drawLine(nav_x, 0, nav_x, height)
 
         painter.setPen(QPen(PLAYHEAD_COLOR, 2))
         x = ms_to_x(self._playhead_ms, self._duration_ms, width)

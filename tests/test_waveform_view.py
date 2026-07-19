@@ -46,3 +46,11 @@ def test_set_zoom_changes_min_width(qtbot):
     width_at_1x = view.minimumWidth()
     view.set_zoom(2.0)
     assert view.minimumWidth() == width_at_1x * 2
+
+
+def test_set_nav_point_stores_position(qtbot):
+    view = WaveformView()
+    qtbot.addWidget(view)
+    view.set_data(np.zeros((50, 2), dtype=np.int16), duration_ms=10_000)
+    view.set_nav_point(2500)
+    assert view._nav_point_ms == 2500

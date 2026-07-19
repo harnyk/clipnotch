@@ -100,7 +100,7 @@ def test_space_stop_returns_playhead_to_navigation_start(qtbot, test_wav_path):
         QTest.keyClick(window, Qt.Key_Space)
 
     mock_play_from.assert_called_once_with(400)
-    assert window._play_start_ms == 400
+    assert window.nav_point_ms == 400
 
     # Playback advances the playhead (mirrors what position_changed does while playing).
     window.playhead_ms = 950
@@ -111,7 +111,58 @@ def test_space_stop_returns_playhead_to_navigation_start(qtbot, test_wav_path):
 
     mock_stop.assert_called_once()
     assert window.playhead_ms == 400
-    assert window._play_start_ms is None
+    # nav_point_ms is persistent (not cleared): pressing Space again resumes from here.
+    assert window.nav_point_ms == 400
+
+
+def test_s_key_stops_playback_and_pins_nav_point_at_current_playhead(qtbot, test_wav_path):
+    from unittest.mock import patch
+
+    window = _load_window_with_tone(qtbot, test_wav_path)
+    window.nav_point_ms = 100  # started playing from here...
+    window.playhead_ms = 650  # ...but playback has since moved on
+
+    with patch.object(window.player, "is_playing", return_value=True), \
+         patch.object(window.player, "stop") as mock_stop:
+        QTest.keyClick(window, Qt.Key_S)
+
+    mock_stop.assert_called_once()
+    # "Stop here": nav point moves to wherever playback currently was, not back to
+    # where it started, and the playhead itself is left where it is (not rewound).
+    assert window.nav_point_ms == 650
+    assert window.playhead_ms == 650
+
+
+def test_s_key_pins_nav_point_even_when_not_playing(qtbot, test_wav_path):
+    from unittest.mock import patch
+
+    window = _load_window_with_tone(qtbot, test_wav_path)
+    window.playhead_ms = 200
+
+    with patch.object(window.player, "is_playing", return_value=False), \
+         patch.object(window.player, "stop") as mock_stop:
+        QTest.keyClick(window, Qt.Key_S)
+
+    mock_stop.assert_not_called()
+    assert window.nav_point_ms == 200
+
+
+def test_ctrl_s_still_exports_instead_of_pinning_nav_point(qtbot, test_wav_path, tmp_path):
+    from unittest.mock import patch
+
+    window = _load_window_with_tone(qtbot, test_wav_path)
+    window.marker_model.add_marker(300)
+    window.marker_model.toggle_interval_at(100)
+    window.output_dir = tmp_path
+    window.nav_point_ms = 0
+    window.playhead_ms = 500
+
+    with patch("clipnotch.main_window.export_intervals", return_value=[]) as mock_export, \
+         patch("clipnotch.main_window.QMessageBox.information"):
+        QTest.keyClick(window, Qt.Key_S, Qt.ControlModifier)
+
+    mock_export.assert_called_once()
+    assert window.nav_point_ms == 0
 
 
 def test_waveform_view_never_takes_keyboard_focus(qtbot, test_wav_path):

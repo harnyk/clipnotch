@@ -46,7 +46,7 @@ class MainWindow(QMainWindow):
 
         self.marker_model: MarkerModel | None = None
         self.playhead_ms = 0
-        self._play_start_ms: int | None = None
+        self.nav_point_ms = 0  # where Space-stop returns playback to; shown in blue
         self.wav_path: Path | None = None
         self.source_name = "track"
         self.output_dir = Path.cwd()
@@ -130,6 +130,7 @@ class MainWindow(QMainWindow):
         self.source_name = resolved_source_name
         self.marker_model = marker_model
         self.playhead_ms = 0
+        self.nav_point_ms = 0
         self.player.load(wav_path)
 
         self.waveform_view.set_data(peaks, duration_ms)
@@ -146,6 +147,7 @@ class MainWindow(QMainWindow):
         self.waveform_view.set_markers(self.marker_model.markers)
         self.waveform_view.set_intervals(self.marker_model.intervals())
         self.waveform_view.set_playhead(self.playhead_ms)
+        self.waveform_view.set_nav_point(self.nav_point_ms)
         self.interval_table.refresh(self.marker_model.intervals())
         self._ensure_playhead_visible()
 
@@ -225,13 +227,16 @@ class MainWindow(QMainWindow):
         elif key == Qt.Key_Space:
             if self.player.is_playing():
                 self.player.stop()
-                if self._play_start_ms is not None:
-                    self.playhead_ms = self._play_start_ms
-                    self._play_start_ms = None
+                self.playhead_ms = self.nav_point_ms
                 self._refresh_views()
             else:
-                self._play_start_ms = self.playhead_ms
+                self.nav_point_ms = self.playhead_ms
                 self.player.play_from(self.playhead_ms)
+        elif key == Qt.Key_S and not ctrl:
+            if self.player.is_playing():
+                self.player.stop()
+            self.nav_point_ms = self.playhead_ms
+            self._refresh_views()
         elif key == Qt.Key_M:
             self.marker_model.add_marker(self.playhead_ms)
             self._refresh_views()

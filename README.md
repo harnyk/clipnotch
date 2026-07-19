@@ -32,7 +32,8 @@ Downloaded audio is cached by a hash of the URL under a temp directory (`$TMPDIR
 |---|---|
 | `←` / `→` | Move playhead by a small step (100 ms) |
 | `Shift + ←` / `Shift + →` | Move playhead by a large step (1000 ms) |
-| `Space` | Play / stop from the current position (stop returns to where playback started, not to the beginning of the file) |
+| `Space` | Play / stop from the current position (stop returns to the nav point, shown in blue) |
+| `S` | "Stop here" — stop playback and pin the nav point (blue) to the current position |
 | `M` | Add a marker at the current position |
 | `Backspace` / `Delete` | Remove the nearest marker |
 | `Tab` | Jump to the next marker |
@@ -44,3 +45,5 @@ Downloaded audio is cached by a hash of the URL under a temp directory (`$TMPDIR
 | `+` / `-` | Zoom the waveform |
 
 Clicking the waveform moves the playhead and returns keyboard focus to the app, so shortcuts keep working afterward. The waveform view auto-scrolls to keep the playhead in view.
+
+The **nav point** (blue line) is the position `Space` returns playback to when stopping. Pressing `Space` to start playing sets it to wherever you started from; pressing `S` explicitly pins it wherever the playhead currently is (e.g. mid-playback), overriding that.
