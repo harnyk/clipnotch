@@ -86,6 +86,11 @@ class MainWindow(QMainWindow):
 
         self.waveform_view.position_clicked.connect(self._set_playhead)
 
+        self.interval_table.setFocusPolicy(Qt.NoFocus)
+        self.export_button.setFocusPolicy(Qt.NoFocus)
+        choose_folder_button.setFocusPolicy(Qt.NoFocus)
+        self.format_combo.setFocusPolicy(Qt.NoFocus)
+
         self.setFocusPolicy(Qt.StrongFocus)
 
     def _on_url_submitted(self) -> None:
@@ -167,7 +172,7 @@ class MainWindow(QMainWindow):
             self.playhead_ms = max(0, self.playhead_ms - step)
             self._refresh_views()
         elif key == Qt.Key_Space:
-            if self.player.position() and self.player._player.isPlaying():
+            if self.player._player.isPlaying():
                 self.player.stop()
             else:
                 self.player.play_from(self.playhead_ms)
