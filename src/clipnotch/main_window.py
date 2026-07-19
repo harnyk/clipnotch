@@ -16,13 +16,13 @@ from PySide6.QtWidgets import (
     QMessageBox,
 )
 
-from audioshit.marker_model import MarkerModel
-from audioshit.waveform import compute_peaks
-from audioshit.waveform_view import WaveformView
-from audioshit.interval_table import IntervalTable
-from audioshit.player import AudioPlayer
-from audioshit.download_worker import DownloadWorker
-from audioshit.export import export_intervals
+from clipnotch.marker_model import MarkerModel
+from clipnotch.waveform import compute_peaks
+from clipnotch.waveform_view import WaveformView
+from clipnotch.interval_table import IntervalTable
+from clipnotch.player import AudioPlayer
+from clipnotch.download_worker import DownloadWorker
+from clipnotch.export import export_intervals
 
 SMALL_STEP_MS = 100
 LARGE_STEP_MS = 1000
@@ -40,7 +40,7 @@ def _wav_duration_ms(path: Path) -> int:
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("audioshit")
+        self.setWindowTitle("clipnotch")
 
         self.marker_model: MarkerModel | None = None
         self.playhead_ms = 0
@@ -102,7 +102,7 @@ class MainWindow(QMainWindow):
         url = self.url_input.text().strip()
         if not url:
             return
-        dest_dir = Path.cwd() / ".audioshit_downloads"
+        dest_dir = Path.cwd() / ".clipnotch_downloads"
         self._worker = DownloadWorker(url, dest_dir, self)
         self._worker.converted.connect(self.load_audio_file)
         self._worker.failed.connect(self._on_download_failed)

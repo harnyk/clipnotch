@@ -1,7 +1,7 @@
 import wave
 from pathlib import Path
-from audioshit.export import format_timecode, build_export_filename, export_intervals
-from audioshit.marker_model import Interval
+from clipnotch.export import format_timecode, build_export_filename, export_intervals
+from clipnotch.marker_model import Interval
 
 
 def test_format_timecode():

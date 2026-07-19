@@ -1,6 +1,6 @@
 from pathlib import Path
 from unittest.mock import patch, MagicMock
-from audioshit.ytdlp_ops import download_audio
+from clipnotch.ytdlp_ops import download_audio
 
 
 def test_download_audio_returns_downloaded_path(tmp_path):
@@ -14,7 +14,7 @@ def test_download_audio_returns_downloaded_path(tmp_path):
     fake_ydl.extract_info.return_value = fake_info
     fake_ydl.prepare_filename.return_value = str(expected_path)
 
-    with patch("audioshit.ytdlp_ops.yt_dlp.YoutubeDL", return_value=fake_ydl) as ydl_cls:
+    with patch("clipnotch.ytdlp_ops.yt_dlp.YoutubeDL", return_value=fake_ydl) as ydl_cls:
         result = download_audio("https://youtube.com/watch?v=abc123", tmp_path)
 
     assert result == expected_path

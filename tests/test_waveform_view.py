@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from PySide6.QtCore import Qt, QPoint
 from PySide6.QtTest import QTest
-from audioshit.waveform_view import WaveformView, ms_to_x, x_to_ms
+from clipnotch.waveform_view import WaveformView, ms_to_x, x_to_ms
 
 
 def test_ms_to_x_and_back():

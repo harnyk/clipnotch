@@ -1,5 +1,5 @@
 import pytest
-from audioshit.marker_model import MarkerModel, Interval
+from clipnotch.marker_model import MarkerModel, Interval
 
 
 def test_new_model_has_no_markers():

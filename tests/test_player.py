@@ -1,5 +1,5 @@
 from unittest.mock import patch
-from audioshit.player import AudioPlayer
+from clipnotch.player import AudioPlayer
 
 
 def test_load_sets_source(qtbot, test_wav_path):

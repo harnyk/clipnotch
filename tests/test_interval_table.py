@@ -1,5 +1,5 @@
-from audioshit.interval_table import IntervalTable
-from audioshit.marker_model import Interval
+from clipnotch.interval_table import IntervalTable
+from clipnotch.marker_model import Interval
 
 
 def test_refresh_populates_rows(qtbot):

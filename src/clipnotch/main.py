@@ -1,7 +1,7 @@
 import sys
 from PySide6.QtWidgets import QApplication, QMessageBox
-from audioshit.ffmpeg_ops import check_ffmpeg_available
-from audioshit.main_window import MainWindow
+from clipnotch.ffmpeg_ops import check_ffmpeg_available
+from clipnotch.main_window import MainWindow
 
 
 def main() -> int:
@@ -11,7 +11,7 @@ def main() -> int:
         QMessageBox.critical(
             None,
             "ffmpeg not found",
-            "ffmpeg was not found on your PATH. Install ffmpeg and restart audioshit.",
+            "ffmpeg was not found on your PATH. Install ffmpeg and restart clipnotch.",
         )
         return 1
 

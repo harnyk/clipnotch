@@ -1,6 +1,6 @@
 from pathlib import Path
-from audioshit.marker_model import Interval
-from audioshit.ffmpeg_ops import build_export_cmd, run_ffmpeg
+from clipnotch.marker_model import Interval
+from clipnotch.ffmpeg_ops import build_export_cmd, run_ffmpeg
 
 
 def format_timecode(ms: int) -> str:

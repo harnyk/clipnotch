@@ -1,6 +1,6 @@
 from PySide6.QtCore import Qt
 from PySide6.QtTest import QTest
-from audioshit.main_window import MainWindow, SMALL_STEP_MS, LARGE_STEP_MS
+from clipnotch.main_window import MainWindow, SMALL_STEP_MS, LARGE_STEP_MS
 
 
 def _load_window_with_tone(qtbot, test_wav_path):
@@ -72,8 +72,8 @@ def test_export_button_calls_export_intervals(qtbot, test_wav_path, tmp_path):
     window.marker_model.toggle_interval_at(100)
     window.output_dir = tmp_path
 
-    with patch("audioshit.main_window.export_intervals", return_value=[]) as mock_export, \
-         patch("audioshit.main_window.QMessageBox.information"):
+    with patch("clipnotch.main_window.export_intervals", return_value=[]) as mock_export, \
+         patch("clipnotch.main_window.QMessageBox.information"):
         window.export_button.click()
 
     mock_export.assert_called_once()

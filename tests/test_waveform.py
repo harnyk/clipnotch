@@ -1,5 +1,5 @@
 import numpy as np
-from audioshit.waveform import compute_peaks
+from clipnotch.waveform import compute_peaks
 
 
 def test_compute_peaks_returns_expected_shape(test_wav_path):

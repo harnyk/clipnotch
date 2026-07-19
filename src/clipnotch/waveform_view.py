@@ -3,7 +3,7 @@ from PySide6.QtCore import Qt, Signal, QSize
 from PySide6.QtGui import QPainter, QColor, QPen
 from PySide6.QtWidgets import QWidget
 
-from audioshit.marker_model import Interval
+from clipnotch.marker_model import Interval
 
 BASE_PX_PER_SEC = 100
 INCLUDED_COLOR = QColor(60, 160, 60)

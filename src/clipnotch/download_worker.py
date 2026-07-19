@@ -1,7 +1,7 @@
 from pathlib import Path
 from PySide6.QtCore import QThread, Signal
-from audioshit.ytdlp_ops import download_audio
-from audioshit.ffmpeg_ops import build_convert_to_wav_cmd, run_ffmpeg
+from clipnotch.ytdlp_ops import download_audio
+from clipnotch.ffmpeg_ops import build_convert_to_wav_cmd, run_ffmpeg
 
 
 class DownloadWorker(QThread):

@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QTableWidget, QTableWidgetItem
-from audioshit.marker_model import Interval
-from audioshit.export import format_timecode
+from clipnotch.marker_model import Interval
+from clipnotch.export import format_timecode
 
 
 class IntervalTable(QTableWidget):
