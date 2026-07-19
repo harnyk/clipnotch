@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QHBoxLayout,
     QLineEdit,
+    QLabel,
     QPushButton,
     QComboBox,
     QScrollArea,
@@ -27,6 +28,7 @@ from clipnotch.export import export_intervals
 
 SMALL_STEP_MS = 100
 LARGE_STEP_MS = 1000
+MARKER_NUDGE_MS = 10
 WAVEFORM_BUCKETS = 2000
 ZOOM_STEP = 1.5
 MIN_ZOOM = 0.25
@@ -48,7 +50,7 @@ class MainWindow(QMainWindow):
         self.marker_model: MarkerModel | None = None
         self.playhead_ms = 0
         self.nav_point_ms = 0  # where Space-stop returns playback to; shown in blue
-        self.loop_mode = False  # toggled by U; affects Enter's interval preview
+        self.loop_mode = False  # toggled by U; affects Space's interval looping
         self.wav_path: Path | None = None
         self.source_name = "track"
         self.output_dir = Path.cwd()
@@ -61,6 +63,9 @@ class MainWindow(QMainWindow):
         self.url_input = QLineEdit()
         self.url_input.setPlaceholderText("Paste a YouTube URL and press Enter")
         self.url_input.returnPressed.connect(self._on_url_submitted)
+
+        self.loop_label = QLabel()
+        self._update_loop_label()
 
         self.format_combo = QComboBox()
         self.format_combo.addItems(["wav", "mp3", "flac"])
@@ -77,6 +82,7 @@ class MainWindow(QMainWindow):
 
         top_bar = QHBoxLayout()
         top_bar.addWidget(self.url_input)
+        top_bar.addWidget(self.loop_label)
 
         export_bar = QHBoxLayout()
         export_bar.addWidget(self.format_combo)
@@ -117,6 +123,12 @@ class MainWindow(QMainWindow):
 
     def _on_download_failed(self, message: str) -> None:
         QMessageBox.critical(self, "Download failed", message)
+
+    def _update_loop_label(self) -> None:
+        # A widget-drawn indicator, not the window title: title-bar text is
+        # rendered by the window manager, not Qt, and may not repaint reliably
+        # on every desktop, which made loop-mode toggling look unresponsive.
+        self.loop_label.setText("Loop: ON (U)" if self.loop_mode else "Loop: OFF (U)")
 
     def load_audio_file(self, wav_path: Path, source_name: str | None = None) -> None:
         try:
@@ -248,6 +260,26 @@ class MainWindow(QMainWindow):
         elif key == Qt.Key_M:
             self.marker_model.add_marker(self.playhead_ms)
             self._refresh_views()
+        elif key == Qt.Key_O:
+            marker = self.marker_model.prev_marker(self.playhead_ms)
+            if marker is not None:
+                self.marker_model.move_marker(marker, -MARKER_NUDGE_MS)
+                self._refresh_views()
+        elif key == Qt.Key_P:
+            marker = self.marker_model.prev_marker(self.playhead_ms)
+            if marker is not None:
+                self.marker_model.move_marker(marker, MARKER_NUDGE_MS)
+                self._refresh_views()
+        elif key == Qt.Key_BracketLeft:
+            marker = self.marker_model.next_marker(self.playhead_ms)
+            if marker is not None:
+                self.marker_model.move_marker(marker, -MARKER_NUDGE_MS)
+                self._refresh_views()
+        elif key == Qt.Key_BracketRight:
+            marker = self.marker_model.next_marker(self.playhead_ms)
+            if marker is not None:
+                self.marker_model.move_marker(marker, MARKER_NUDGE_MS)
+                self._refresh_views()
         elif key == Qt.Key_K:
             target = self.marker_model.prev_interval_start(self.playhead_ms)
             if target is not None:
@@ -276,7 +308,7 @@ class MainWindow(QMainWindow):
             self._refresh_views()
         elif key == Qt.Key_U:
             self.loop_mode = not self.loop_mode
-            self.setWindowTitle(f"{WINDOW_TITLE} [loop]" if self.loop_mode else WINDOW_TITLE)
+            self._update_loop_label()
         elif key == Qt.Key_X:
             self.marker_model.toggle_interval_at(self.playhead_ms)
             self._refresh_views()

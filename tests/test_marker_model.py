@@ -117,3 +117,55 @@ def test_next_and_prev_interval_start_with_no_markers():
     model = MarkerModel(duration_ms=10_000)
     assert model.next_interval_start(0) is None
     assert model.prev_interval_start(0) is None
+
+
+def test_move_marker_shifts_position():
+    model = MarkerModel(duration_ms=10_000)
+    model.add_marker(3000)
+    model.move_marker(3000, 10)
+    assert model.markers == [3010]
+    model.move_marker(3010, -20)
+    assert model.markers == [2990]
+
+
+def test_move_marker_clamps_at_neighboring_markers():
+    model = MarkerModel(duration_ms=10_000)
+    model.add_marker(3000)
+    model.add_marker(3005)
+    # Moving 3000 rightward can't reach or pass 3005.
+    model.move_marker(3000, 100)
+    assert model.markers == [3004, 3005]
+    # Moving 3005 leftward can't reach or pass 3004.
+    model.move_marker(3005, -100)
+    assert model.markers == [3004, 3005]
+
+
+def test_move_marker_clamps_at_track_boundaries():
+    model = MarkerModel(duration_ms=10_000)
+    model.add_marker(5)
+    model.move_marker(5, -100)
+    assert model.markers == [1]
+
+    model.add_marker(9995)
+    model.move_marker(9995, 100)
+    assert model.markers == [1, 9999]
+
+
+def test_move_marker_does_nothing_for_unknown_position():
+    model = MarkerModel(duration_ms=10_000)
+    model.add_marker(3000)
+    model.move_marker(4000, 10)
+    assert model.markers == [3000]
+
+
+def test_move_marker_preserves_included_flag_of_the_interval_it_starts():
+    model = MarkerModel(duration_ms=10_000)
+    model.add_marker(3000)
+    model.add_marker(7000)
+    model.toggle_interval_at(4000)  # includes the [3000, 7000) interval
+    assert model.interval_containing(4000).included is True
+
+    model.move_marker(3000, 10)
+
+    assert model.markers == [3010, 7000]
+    assert model.interval_containing(4000).included is True

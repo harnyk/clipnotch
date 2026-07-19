@@ -56,6 +56,22 @@ class MarkerModel:
             return self.intervals()[-1]
         return None
 
+    def move_marker(self, position_ms: int, delta_ms: int) -> None:
+        if position_ms not in self._markers:
+            return
+        idx = self._markers.index(position_ms)
+        lower_bound = self._markers[idx - 1] if idx > 0 else 0
+        upper_bound = self._markers[idx + 1] if idx + 1 < len(self._markers) else self.duration_ms
+        if lower_bound + 1 > upper_bound - 1:
+            return  # no room to move without colliding with a neighboring marker
+        new_position = max(lower_bound + 1, min(upper_bound - 1, position_ms + delta_ms))
+        if new_position == position_ms:
+            return
+        self._markers[idx] = new_position
+        if position_ms in self._included_starts:
+            self._included_starts.discard(position_ms)
+            self._included_starts.add(new_position)
+
     def next_marker(self, position_ms: int) -> int | None:
         candidates = [m for m in self._markers if m > position_ms]
         return min(candidates) if candidates else None

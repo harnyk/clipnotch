@@ -37,6 +37,49 @@ def test_m_key_adds_marker_at_playhead(qtbot, test_wav_path):
     assert window.playhead_ms in window.marker_model.markers
 
 
+def test_o_and_p_nudge_the_marker_left_of_the_playhead(qtbot, test_wav_path):
+    window = _load_window_with_tone(qtbot, test_wav_path)
+    window.marker_model.add_marker(300)
+    window.marker_model.add_marker(700)
+    window.playhead_ms = 500  # between the two markers
+
+    QTest.keyClick(window, Qt.Key_O)
+    assert window.marker_model.markers == [290, 700]
+
+    QTest.keyClick(window, Qt.Key_P)
+    QTest.keyClick(window, Qt.Key_P)
+    assert window.marker_model.markers == [310, 700]
+
+
+def test_bracket_keys_nudge_the_marker_right_of_the_playhead(qtbot, test_wav_path):
+    window = _load_window_with_tone(qtbot, test_wav_path)
+    window.marker_model.add_marker(300)
+    window.marker_model.add_marker(700)
+    window.playhead_ms = 500  # between the two markers
+
+    QTest.keyClick(window, Qt.Key_BracketRight)
+    assert window.marker_model.markers == [300, 710]
+
+    QTest.keyClick(window, Qt.Key_BracketLeft)
+    QTest.keyClick(window, Qt.Key_BracketLeft)
+    assert window.marker_model.markers == [300, 690]
+
+
+def test_o_p_bracket_keys_are_noop_when_no_marker_on_that_side(qtbot, test_wav_path):
+    window = _load_window_with_tone(qtbot, test_wav_path)
+    window.marker_model.add_marker(500)
+    window.playhead_ms = 500  # no marker to the left, one marker (500) to the right
+
+    QTest.keyClick(window, Qt.Key_O)
+    QTest.keyClick(window, Qt.Key_P)
+    assert window.marker_model.markers == [500]
+
+    window.playhead_ms = 501  # no marker to the right now (500 is to the left)
+    QTest.keyClick(window, Qt.Key_BracketLeft)
+    QTest.keyClick(window, Qt.Key_BracketRight)
+    assert window.marker_model.markers == [500]
+
+
 def test_x_key_toggles_current_interval(qtbot, test_wav_path):
     window = _load_window_with_tone(qtbot, test_wav_path)
     QTest.keyClick(window, Qt.Key_X)
@@ -187,12 +230,15 @@ def test_enter_only_sets_nav_point_and_does_not_play(qtbot, test_wav_path):
 def test_u_key_toggles_loop_mode(qtbot, test_wav_path):
     window = _load_window_with_tone(qtbot, test_wav_path)
     assert window.loop_mode is False
+    assert "OFF" in window.loop_label.text()
 
     QTest.keyClick(window, Qt.Key_U)
     assert window.loop_mode is True
+    assert "ON" in window.loop_label.text()
 
     QTest.keyClick(window, Qt.Key_U)
     assert window.loop_mode is False
+    assert "OFF" in window.loop_label.text()
 
 
 def test_space_loops_within_current_interval_when_loop_mode_is_on(qtbot, test_wav_path):
