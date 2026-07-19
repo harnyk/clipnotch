@@ -1,5 +1,6 @@
 from pathlib import Path
 import os
+import tempfile
 import wave
 
 from PySide6.QtCore import Qt, QEvent
@@ -18,7 +19,7 @@ from PySide6.QtWidgets import (
 
 from clipnotch.marker_model import MarkerModel
 from clipnotch.waveform import compute_peaks
-from clipnotch.waveform_view import WaveformView
+from clipnotch.waveform_view import WaveformView, ms_to_x
 from clipnotch.interval_table import IntervalTable
 from clipnotch.player import AudioPlayer
 from clipnotch.download_worker import DownloadWorker
@@ -30,6 +31,7 @@ WAVEFORM_BUCKETS = 2000
 ZOOM_STEP = 1.5
 MIN_ZOOM = 0.25
 MAX_ZOOM = 8.0
+DOWNLOAD_CACHE_DIR = Path(tempfile.gettempdir()) / "clipnotch"
 
 
 def _wav_duration_ms(path: Path) -> int:
@@ -67,9 +69,9 @@ class MainWindow(QMainWindow):
         choose_folder_button = QPushButton("Choose output folder...")
         choose_folder_button.clicked.connect(self._on_choose_output_folder)
 
-        scroll_area = QScrollArea()
-        scroll_area.setWidget(self.waveform_view)
-        scroll_area.setWidgetResizable(False)
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidget(self.waveform_view)
+        self.scroll_area.setWidgetResizable(False)
 
         top_bar = QHBoxLayout()
         top_bar.addWidget(self.url_input)
@@ -81,7 +83,7 @@ class MainWindow(QMainWindow):
 
         layout = QVBoxLayout()
         layout.addLayout(top_bar)
-        layout.addWidget(scroll_area, stretch=2)
+        layout.addWidget(self.scroll_area, stretch=2)
         layout.addWidget(self.interval_table, stretch=1)
         layout.addLayout(export_bar)
 
@@ -100,11 +102,13 @@ class MainWindow(QMainWindow):
         self.setFocusPolicy(Qt.StrongFocus)
 
     def _on_url_submitted(self) -> None:
-        url = self.url_input.text().strip()
+        self.start_download(self.url_input.text().strip())
+
+    def start_download(self, url: str) -> None:
         if not url:
             return
-        dest_dir = Path.cwd() / ".clipnotch_downloads"
-        self._worker = DownloadWorker(url, dest_dir, self)
+        self.url_input.setText(url)
+        self._worker = DownloadWorker(url, DOWNLOAD_CACHE_DIR, self)
         self._worker.converted.connect(self.load_audio_file)
         self._worker.failed.connect(self._on_download_failed)
         self._worker.start()
@@ -112,9 +116,9 @@ class MainWindow(QMainWindow):
     def _on_download_failed(self, message: str) -> None:
         QMessageBox.critical(self, "Download failed", message)
 
-    def load_audio_file(self, wav_path: Path) -> None:
+    def load_audio_file(self, wav_path: Path, source_name: str | None = None) -> None:
         try:
-            source_name = wav_path.stem
+            resolved_source_name = source_name if source_name is not None else wav_path.stem
             duration_ms = _wav_duration_ms(wav_path)
             marker_model = MarkerModel(duration_ms)
             peaks = compute_peaks(wav_path, WAVEFORM_BUCKETS)
@@ -123,14 +127,14 @@ class MainWindow(QMainWindow):
             return
 
         self.wav_path = wav_path
-        self.source_name = source_name
+        self.source_name = resolved_source_name
         self.marker_model = marker_model
         self.playhead_ms = 0
         self.player.load(wav_path)
 
         self.waveform_view.set_data(peaks, duration_ms)
         self._refresh_views()
-        self.waveform_view.setFocus()
+        self.setFocus()
 
     def _on_player_position_changed(self, position_ms: int) -> None:
         self.playhead_ms = position_ms
@@ -143,10 +147,18 @@ class MainWindow(QMainWindow):
         self.waveform_view.set_intervals(self.marker_model.intervals())
         self.waveform_view.set_playhead(self.playhead_ms)
         self.interval_table.refresh(self.marker_model.intervals())
+        self._ensure_playhead_visible()
+
+    def _ensure_playhead_visible(self) -> None:
+        if self.marker_model is None:
+            return
+        x = ms_to_x(self.playhead_ms, self.marker_model.duration_ms, self.waveform_view.width())
+        self.scroll_area.ensureVisible(x, self.waveform_view.height() // 2, 50, 0)
 
     def _set_playhead(self, position_ms: int) -> None:
         self.playhead_ms = position_ms
         self._refresh_views()
+        self.setFocus()
 
     def _on_choose_output_folder(self) -> None:
         chosen = QFileDialog.getExistingDirectory(self, "Choose output folder", str(self.output_dir))
@@ -223,6 +235,16 @@ class MainWindow(QMainWindow):
         elif key == Qt.Key_M:
             self.marker_model.add_marker(self.playhead_ms)
             self._refresh_views()
+        elif key == Qt.Key_K:
+            target = self.marker_model.prev_interval_start(self.playhead_ms)
+            if target is not None:
+                self.playhead_ms = target
+                self._refresh_views()
+        elif key == Qt.Key_L:
+            target = self.marker_model.next_interval_start(self.playhead_ms)
+            if target is not None:
+                self.playhead_ms = target
+                self._refresh_views()
         elif key in (Qt.Key_Backspace, Qt.Key_Delete):
             self.marker_model.remove_nearest_marker(self.playhead_ms)
             self._refresh_views()

@@ -1,5 +1,5 @@
 import numpy as np
-from PySide6.QtCore import Qt, Signal, QSize
+from PySide6.QtCore import Signal, QSize
 from PySide6.QtGui import QPainter, QColor, QPen
 from PySide6.QtWidgets import QWidget
 
@@ -36,7 +36,10 @@ class WaveformView(QWidget):
         self._playhead_ms = 0
         self._zoom = 1.0
         self.setMinimumHeight(120)
-        self.setFocusPolicy(Qt.ClickFocus)
+        # Deliberately NoFocus (the default): MainWindow is the sole keyboard-shortcut
+        # owner. If this widget took focus itself, Qt's Tab/arrow-key handling would
+        # apply to it (and to its QScrollArea ancestor) instead of reaching
+        # MainWindow.keyPressEvent/event(), silently breaking every shortcut.
 
     def set_data(self, peaks: np.ndarray, duration_ms: int) -> None:
         self._peaks = peaks

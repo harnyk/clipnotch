@@ -56,6 +56,31 @@ def test_tab_jumps_to_next_marker(qtbot, test_wav_path):
     assert window.playhead_ms == 300
 
 
+def test_l_and_k_navigate_between_intervals(qtbot, test_wav_path):
+    window = _load_window_with_tone(qtbot, test_wav_path)
+    window.marker_model.add_marker(300)
+    window.marker_model.add_marker(700)
+    window.playhead_ms = 0
+
+    QTest.keyClick(window, Qt.Key_L)
+    assert window.playhead_ms == 300
+
+    QTest.keyClick(window, Qt.Key_L)
+    assert window.playhead_ms == 700
+
+    QTest.keyClick(window, Qt.Key_L)
+    assert window.playhead_ms == 700  # already the last interval, no-op
+
+    QTest.keyClick(window, Qt.Key_K)
+    assert window.playhead_ms == 300
+
+    QTest.keyClick(window, Qt.Key_K)
+    assert window.playhead_ms == 0
+
+    QTest.keyClick(window, Qt.Key_K)
+    assert window.playhead_ms == 0  # already the first interval, no-op
+
+
 def test_backspace_removes_nearest_marker(qtbot, test_wav_path):
     window = _load_window_with_tone(qtbot, test_wav_path)
     window.marker_model.add_marker(300)
@@ -87,6 +112,37 @@ def test_space_stop_returns_playhead_to_navigation_start(qtbot, test_wav_path):
     mock_stop.assert_called_once()
     assert window.playhead_ms == 400
     assert window._play_start_ms is None
+
+
+def test_waveform_view_never_takes_keyboard_focus(qtbot, test_wav_path):
+    # Regression test: WaveformView briefly had Qt.ClickFocus so it could take
+    # keyboard focus on click. That broke every shortcut, because Qt's Tab/arrow-key
+    # handling then applied to WaveformView (and its QScrollArea ancestor) instead of
+    # reaching MainWindow.keyPressEvent/event() — the sole place shortcuts are wired.
+    window = _load_window_with_tone(qtbot, test_wav_path)
+    assert window.waveform_view.focusPolicy() == Qt.NoFocus
+
+
+def test_clicking_waveform_returns_keyboard_focus_to_main_window(qtbot, test_wav_path):
+    from unittest.mock import patch
+
+    window = _load_window_with_tone(qtbot, test_wav_path)
+    with patch.object(window, "setFocus") as mock_set_focus:
+        window.waveform_view.position_clicked.emit(250)
+
+    mock_set_focus.assert_called_once()
+    assert window.playhead_ms == 250
+
+
+def test_load_audio_file_returns_keyboard_focus_to_main_window(qtbot, test_wav_path):
+    from unittest.mock import patch
+
+    window = MainWindow()
+    qtbot.addWidget(window)
+    with patch.object(window, "setFocus") as mock_set_focus:
+        window.load_audio_file(test_wav_path)
+
+    mock_set_focus.assert_called_once()
 
 
 def test_export_button_calls_export_intervals(qtbot, test_wav_path, tmp_path):
