@@ -44,6 +44,7 @@ class MainWindow(QMainWindow):
 
         self.marker_model: MarkerModel | None = None
         self.playhead_ms = 0
+        self._play_start_ms: int | None = None
         self.wav_path: Path | None = None
         self.source_name = "track"
         self.output_dir = Path.cwd()
@@ -212,7 +213,12 @@ class MainWindow(QMainWindow):
         elif key == Qt.Key_Space:
             if self.player.is_playing():
                 self.player.stop()
+                if self._play_start_ms is not None:
+                    self.playhead_ms = self._play_start_ms
+                    self._play_start_ms = None
+                self._refresh_views()
             else:
+                self._play_start_ms = self.playhead_ms
                 self.player.play_from(self.playhead_ms)
         elif key == Qt.Key_M:
             self.marker_model.add_marker(self.playhead_ms)

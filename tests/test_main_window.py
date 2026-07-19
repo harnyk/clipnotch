@@ -64,6 +64,31 @@ def test_backspace_removes_nearest_marker(qtbot, test_wav_path):
     assert window.marker_model.markers == []
 
 
+def test_space_stop_returns_playhead_to_navigation_start(qtbot, test_wav_path):
+    from unittest.mock import patch
+
+    window = _load_window_with_tone(qtbot, test_wav_path)
+    window.playhead_ms = 400
+
+    with patch.object(window.player, "is_playing", return_value=False), \
+         patch.object(window.player, "play_from") as mock_play_from:
+        QTest.keyClick(window, Qt.Key_Space)
+
+    mock_play_from.assert_called_once_with(400)
+    assert window._play_start_ms == 400
+
+    # Playback advances the playhead (mirrors what position_changed does while playing).
+    window.playhead_ms = 950
+
+    with patch.object(window.player, "is_playing", return_value=True), \
+         patch.object(window.player, "stop") as mock_stop:
+        QTest.keyClick(window, Qt.Key_Space)
+
+    mock_stop.assert_called_once()
+    assert window.playhead_ms == 400
+    assert window._play_start_ms is None
+
+
 def test_export_button_calls_export_intervals(qtbot, test_wav_path, tmp_path):
     from unittest.mock import patch
 
