@@ -5,7 +5,7 @@ from audioshit.ffmpeg_ops import build_convert_to_wav_cmd, run_ffmpeg
 
 
 class DownloadWorker(QThread):
-    finished = Signal(Path)
+    converted = Signal(Path)
     failed = Signal(str)
 
     def __init__(self, url: str, dest_dir: Path, parent=None):
@@ -21,4 +21,4 @@ class DownloadWorker(QThread):
         except Exception as exc:  # noqa: BLE001 - surface any failure to the UI
             self.failed.emit(str(exc))
             return
-        self.finished.emit(wav_path)
+        self.converted.emit(wav_path)

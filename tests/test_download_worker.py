@@ -14,7 +14,7 @@ def test_worker_emits_finished_with_wav_path(qtbot, tmp_path):
     with patch("audioshit.download_worker.download_audio", return_value=downloaded), \
          patch("audioshit.download_worker.run_ffmpeg", side_effect=fake_run_ffmpeg):
         worker = DownloadWorker("https://youtube.com/watch?v=abc", tmp_path)
-        with qtbot.waitSignal(worker.finished, timeout=5000) as blocker:
+        with qtbot.waitSignal(worker.converted, timeout=5000) as blocker:
             worker.start()
 
     assert blocker.args[0] == expected_wav
