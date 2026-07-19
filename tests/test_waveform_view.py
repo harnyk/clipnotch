@@ -31,12 +31,12 @@ def test_click_emits_position_clicked(qtbot):
     view = WaveformView()
     qtbot.addWidget(view)
     view.resize(200, 100)
-    view.set_data(np.zeros((50, 2), dtype=np.int16), duration_ms=10_000)
+    view.set_data(np.zeros((50, 2), dtype=np.int16), duration_ms=1_000)
 
     with qtbot.waitSignal(view.position_clicked, timeout=1000) as blocker:
         QTest.mouseClick(view, Qt.LeftButton, pos=QPoint(100, 50))
 
-    assert blocker.args[0] == pytest.approx(5000, abs=200)
+    assert blocker.args[0] == pytest.approx(500, abs=100)
 
 
 def test_set_zoom_changes_min_width(qtbot):
