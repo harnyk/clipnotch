@@ -34,6 +34,9 @@ class AudioPlayer(QObject):
     def position(self) -> int:
         return self._player.position()
 
+    def is_playing(self) -> bool:
+        return self._player.isPlaying()
+
     def _on_position_changed(self, position: int) -> None:
         self.position_changed.emit(position)
         if self._stop_at_ms is not None and position >= self._stop_at_ms:
