@@ -12,6 +12,7 @@ class AudioPlayer(QObject):
         self._audio_output = QAudioOutput(self)
         self._player.setAudioOutput(self._audio_output)
         self._stop_at_ms: int | None = None
+        self._loop_range: tuple[int, int] | None = None
         self._player.positionChanged.connect(self._on_position_changed)
 
     def load(self, path: Path) -> None:
@@ -19,16 +20,25 @@ class AudioPlayer(QObject):
 
     def play_from(self, position_ms: int) -> None:
         self._stop_at_ms = None
+        self._loop_range = None
         self._player.setPosition(position_ms)
         self._player.play()
 
     def play_once_range(self, start_ms: int, end_ms: int) -> None:
         self._stop_at_ms = end_ms
+        self._loop_range = None
+        self._player.setPosition(start_ms)
+        self._player.play()
+
+    def play_looping_range(self, start_ms: int, end_ms: int) -> None:
+        self._stop_at_ms = None
+        self._loop_range = (start_ms, end_ms)
         self._player.setPosition(start_ms)
         self._player.play()
 
     def stop(self) -> None:
         self._stop_at_ms = None
+        self._loop_range = None
         self._stop_without_resetting_position()
 
     def position(self) -> int:
@@ -50,3 +60,7 @@ class AudioPlayer(QObject):
         if self._stop_at_ms is not None and position >= self._stop_at_ms:
             self._stop_without_resetting_position()
             self._stop_at_ms = None
+        elif self._loop_range is not None:
+            start_ms, end_ms = self._loop_range
+            if position >= end_ms:
+                self._player.setPosition(start_ms)

@@ -89,10 +89,12 @@ def test_backspace_removes_nearest_marker(qtbot, test_wav_path):
     assert window.marker_model.markers == []
 
 
-def test_space_stop_returns_playhead_to_navigation_start(qtbot, test_wav_path):
+def test_space_stop_returns_playhead_to_nav_point(qtbot, test_wav_path):
     from unittest.mock import patch
 
     window = _load_window_with_tone(qtbot, test_wav_path)
+    # nav_point_ms is only ever set by Enter or K/L now, not by Space itself.
+    window.nav_point_ms = 400
     window.playhead_ms = 400
 
     with patch.object(window.player, "is_playing", return_value=False), \
@@ -100,7 +102,7 @@ def test_space_stop_returns_playhead_to_navigation_start(qtbot, test_wav_path):
         QTest.keyClick(window, Qt.Key_Space)
 
     mock_play_from.assert_called_once_with(400)
-    assert window.nav_point_ms == 400
+    assert window.nav_point_ms == 400  # unchanged by starting playback
 
     # Playback advances the playhead (mirrors what position_changed does while playing).
     window.playhead_ms = 950
@@ -111,32 +113,31 @@ def test_space_stop_returns_playhead_to_navigation_start(qtbot, test_wav_path):
 
     mock_stop.assert_called_once()
     assert window.playhead_ms == 400
-    # nav_point_ms is persistent (not cleared): pressing Space again resumes from here.
-    assert window.nav_point_ms == 400
+    assert window.nav_point_ms == 400  # still unchanged
 
 
-def test_s_key_stops_playback_and_pins_nav_point_at_current_playhead(qtbot, test_wav_path):
+def test_s_key_stops_in_place_without_touching_nav_point_or_playhead(qtbot, test_wav_path):
     from unittest.mock import patch
 
     window = _load_window_with_tone(qtbot, test_wav_path)
-    window.nav_point_ms = 100  # started playing from here...
-    window.playhead_ms = 650  # ...but playback has since moved on
+    window.nav_point_ms = 100
+    window.playhead_ms = 650  # playback has moved on from the nav point
 
     with patch.object(window.player, "is_playing", return_value=True), \
          patch.object(window.player, "stop") as mock_stop:
         QTest.keyClick(window, Qt.Key_S)
 
     mock_stop.assert_called_once()
-    # "Stop here": nav point moves to wherever playback currently was, not back to
-    # where it started, and the playhead itself is left where it is (not rewound).
-    assert window.nav_point_ms == 650
+    # Unlike Space, S does not rewind the playhead and does not move the nav point.
     assert window.playhead_ms == 650
+    assert window.nav_point_ms == 100
 
 
-def test_s_key_pins_nav_point_even_when_not_playing(qtbot, test_wav_path):
+def test_s_key_does_nothing_when_not_playing(qtbot, test_wav_path):
     from unittest.mock import patch
 
     window = _load_window_with_tone(qtbot, test_wav_path)
+    window.nav_point_ms = 100
     window.playhead_ms = 200
 
     with patch.object(window.player, "is_playing", return_value=False), \
@@ -144,10 +145,11 @@ def test_s_key_pins_nav_point_even_when_not_playing(qtbot, test_wav_path):
         QTest.keyClick(window, Qt.Key_S)
 
     mock_stop.assert_not_called()
-    assert window.nav_point_ms == 200
+    assert window.nav_point_ms == 100
+    assert window.playhead_ms == 200
 
 
-def test_ctrl_s_still_exports_instead_of_pinning_nav_point(qtbot, test_wav_path, tmp_path):
+def test_ctrl_s_still_exports_instead_of_stopping_in_place(qtbot, test_wav_path, tmp_path):
     from unittest.mock import patch
 
     window = _load_window_with_tone(qtbot, test_wav_path)
@@ -162,6 +164,80 @@ def test_ctrl_s_still_exports_instead_of_pinning_nav_point(qtbot, test_wav_path,
         QTest.keyClick(window, Qt.Key_S, Qt.ControlModifier)
 
     mock_export.assert_called_once()
+    assert window.nav_point_ms == 0
+
+
+def test_enter_sets_nav_point_to_current_playhead(qtbot, test_wav_path):
+    from unittest.mock import patch
+
+    window = _load_window_with_tone(qtbot, test_wav_path)
+    window.marker_model.add_marker(500)
+    window.playhead_ms = 200
+    window.nav_point_ms = 999
+
+    with patch.object(window.player, "play_once_range") as mock_preview:
+        QTest.keyClick(window, Qt.Key_Return)
+
+    mock_preview.assert_called_once_with(0, 500)
+    assert window.nav_point_ms == 200
+
+
+def test_u_key_toggles_loop_mode(qtbot, test_wav_path):
+    window = _load_window_with_tone(qtbot, test_wav_path)
+    assert window.loop_mode is False
+
+    QTest.keyClick(window, Qt.Key_U)
+    assert window.loop_mode is True
+
+    QTest.keyClick(window, Qt.Key_U)
+    assert window.loop_mode is False
+
+
+def test_enter_uses_looping_playback_when_loop_mode_is_on(qtbot, test_wav_path):
+    from unittest.mock import patch
+
+    window = _load_window_with_tone(qtbot, test_wav_path)
+    window.marker_model.add_marker(500)
+    window.playhead_ms = 200
+    window.loop_mode = True
+
+    with patch.object(window.player, "play_looping_range") as mock_loop, \
+         patch.object(window.player, "play_once_range") as mock_once:
+        QTest.keyClick(window, Qt.Key_Return)
+
+    mock_loop.assert_called_once_with(0, 500)
+    mock_once.assert_not_called()
+
+
+def test_enter_uses_single_shot_playback_when_loop_mode_is_off(qtbot, test_wav_path):
+    from unittest.mock import patch
+
+    window = _load_window_with_tone(qtbot, test_wav_path)
+    window.marker_model.add_marker(500)
+    window.playhead_ms = 200
+    assert window.loop_mode is False
+
+    with patch.object(window.player, "play_looping_range") as mock_loop, \
+         patch.object(window.player, "play_once_range") as mock_once:
+        QTest.keyClick(window, Qt.Key_Return)
+
+    mock_once.assert_called_once_with(0, 500)
+    mock_loop.assert_not_called()
+
+
+def test_k_and_l_set_nav_point_to_interval_start(qtbot, test_wav_path):
+    window = _load_window_with_tone(qtbot, test_wav_path)
+    window.marker_model.add_marker(300)
+    window.marker_model.add_marker(700)
+    window.playhead_ms = 0
+    window.nav_point_ms = 999
+
+    QTest.keyClick(window, Qt.Key_L)
+    assert window.playhead_ms == 300
+    assert window.nav_point_ms == 300
+
+    QTest.keyClick(window, Qt.Key_K)
+    assert window.playhead_ms == 0
     assert window.nav_point_ms == 0
 
 

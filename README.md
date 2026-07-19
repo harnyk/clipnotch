@@ -33,17 +33,18 @@ Downloaded audio is cached by a hash of the URL under a temp directory (`$TMPDIR
 | `←` / `→` | Move playhead by a small step (100 ms) |
 | `Shift + ←` / `Shift + →` | Move playhead by a large step (1000 ms) |
 | `Space` | Play / stop from the current position (stop returns to the nav point, shown in blue) |
-| `S` | "Stop here" — stop playback and pin the nav point (blue) to the current position |
+| `S` | Stop in place — stop playback without rewinding to the nav point and without moving it |
 | `M` | Add a marker at the current position |
 | `Backspace` / `Delete` | Remove the nearest marker |
 | `Tab` | Jump to the next marker |
 | `Shift + Tab` | Jump to the previous marker |
-| `K` / `L` | Jump to the previous / next interval (covers the first and last interval too, unlike Tab) |
-| `Enter` | Preview the current interval once |
+| `K` / `L` | Jump to the previous / next interval (covers the first and last interval too, unlike Tab); also sets the nav point there |
+| `Enter` | Preview the current interval (once, or looping if `U` is on); sets the nav point to the current position |
+| `U` | Toggle loop mode for `Enter`'s interval preview (window title shows `[loop]` when on) |
 | `X` | Toggle the current interval for export |
 | `Ctrl + S` | Export all included intervals |
 | `+` / `-` | Zoom the waveform |
 
 Clicking the waveform moves the playhead and returns keyboard focus to the app, so shortcuts keep working afterward. The waveform view auto-scrolls to keep the playhead in view.
 
-The **nav point** (blue line) is the position `Space` returns playback to when stopping. Pressing `Space` to start playing sets it to wherever you started from; pressing `S` explicitly pins it wherever the playhead currently is (e.g. mid-playback), overriding that.
+The **nav point** (blue line) is the position `Space` returns playback to when stopping. It's only set by `Enter` (interval preview) or by jumping to an interval with `K`/`L` — plain navigation (arrows, Tab) and `Space`/`S` never move it.

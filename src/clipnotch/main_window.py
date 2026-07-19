@@ -32,6 +32,7 @@ ZOOM_STEP = 1.5
 MIN_ZOOM = 0.25
 MAX_ZOOM = 8.0
 DOWNLOAD_CACHE_DIR = Path(tempfile.gettempdir()) / "clipnotch"
+WINDOW_TITLE = "clipnotch"
 
 
 def _wav_duration_ms(path: Path) -> int:
@@ -42,11 +43,12 @@ def _wav_duration_ms(path: Path) -> int:
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("clipnotch")
+        self.setWindowTitle(WINDOW_TITLE)
 
         self.marker_model: MarkerModel | None = None
         self.playhead_ms = 0
         self.nav_point_ms = 0  # where Space-stop returns playback to; shown in blue
+        self.loop_mode = False  # toggled by U; affects Enter's interval preview
         self.wav_path: Path | None = None
         self.source_name = "track"
         self.output_dir = Path.cwd()
@@ -230,13 +232,13 @@ class MainWindow(QMainWindow):
                 self.playhead_ms = self.nav_point_ms
                 self._refresh_views()
             else:
-                self.nav_point_ms = self.playhead_ms
                 self.player.play_from(self.playhead_ms)
         elif key == Qt.Key_S and not ctrl:
+            # Stop in place: unlike Space, this does not rewind to the nav point
+            # and does not move the nav point either.
             if self.player.is_playing():
                 self.player.stop()
-            self.nav_point_ms = self.playhead_ms
-            self._refresh_views()
+                self._refresh_views()
         elif key == Qt.Key_M:
             self.marker_model.add_marker(self.playhead_ms)
             self._refresh_views()
@@ -244,11 +246,13 @@ class MainWindow(QMainWindow):
             target = self.marker_model.prev_interval_start(self.playhead_ms)
             if target is not None:
                 self.playhead_ms = target
+                self.nav_point_ms = target
                 self._refresh_views()
         elif key == Qt.Key_L:
             target = self.marker_model.next_interval_start(self.playhead_ms)
             if target is not None:
                 self.playhead_ms = target
+                self.nav_point_ms = target
                 self._refresh_views()
         elif key in (Qt.Key_Backspace, Qt.Key_Delete):
             self.marker_model.remove_nearest_marker(self.playhead_ms)
@@ -264,7 +268,15 @@ class MainWindow(QMainWindow):
         elif key in (Qt.Key_Return, Qt.Key_Enter):
             interval = self.marker_model.interval_containing(self.playhead_ms)
             if interval is not None:
-                self.player.play_once_range(interval.start_ms, interval.end_ms)
+                self.nav_point_ms = self.playhead_ms
+                self._refresh_views()
+                if self.loop_mode:
+                    self.player.play_looping_range(interval.start_ms, interval.end_ms)
+                else:
+                    self.player.play_once_range(interval.start_ms, interval.end_ms)
+        elif key == Qt.Key_U:
+            self.loop_mode = not self.loop_mode
+            self.setWindowTitle(f"{WINDOW_TITLE} [loop]" if self.loop_mode else WINDOW_TITLE)
         elif key == Qt.Key_X:
             self.marker_model.toggle_interval_at(self.playhead_ms)
             self._refresh_views()
