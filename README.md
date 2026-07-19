@@ -16,7 +16,15 @@ This puts a `clipnotch` executable on your `PATH` (via `uv tool`). Requires `ffm
 clipnotch
 ```
 
-(or, from inside the project directory without installing: `uv run clipnotch`)
+Or launch straight into a YouTube URL, skipping the paste-and-Enter step:
+
+```bash
+clipnotch https://www.youtube.com/watch?v=...
+```
+
+(or, from inside the project directory without installing: `uv run clipnotch [url]`)
+
+Downloaded audio is cached by a hash of the URL under a temp directory (`$TMPDIR/clipnotch`, e.g. `/tmp/clipnotch`), so reopening the same URL skips re-downloading and re-converting.
 
 ## Keyboard cheatsheet
 
@@ -29,9 +37,10 @@ clipnotch
 | `Backspace` / `Delete` | Remove the nearest marker |
 | `Tab` | Jump to the next marker |
 | `Shift + Tab` | Jump to the previous marker |
+| `K` / `L` | Jump to the previous / next interval (covers the first and last interval too, unlike Tab) |
 | `Enter` | Preview the current interval once |
 | `X` | Toggle the current interval for export |
 | `Ctrl + S` | Export all included intervals |
 | `+` / `-` | Zoom the waveform |
 
-Clicking the waveform moves the playhead and gives it keyboard focus.
+Clicking the waveform moves the playhead and returns keyboard focus to the app, so shortcuts keep working afterward. The waveform view auto-scrolls to keep the playhead in view.
