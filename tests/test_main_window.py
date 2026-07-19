@@ -72,7 +72,8 @@ def test_export_button_calls_export_intervals(qtbot, test_wav_path, tmp_path):
     window.marker_model.toggle_interval_at(100)
     window.output_dir = tmp_path
 
-    with patch("audioshit.main_window.export_intervals", return_value=[]) as mock_export:
+    with patch("audioshit.main_window.export_intervals", return_value=[]) as mock_export, \
+         patch("audioshit.main_window.QMessageBox.information"):
         window.export_button.click()
 
     mock_export.assert_called_once()
