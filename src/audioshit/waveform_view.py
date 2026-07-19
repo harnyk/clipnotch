@@ -1,5 +1,5 @@
 import numpy as np
-from PySide6.QtCore import Signal, QSize
+from PySide6.QtCore import Qt, Signal, QSize
 from PySide6.QtGui import QPainter, QColor, QPen
 from PySide6.QtWidgets import QWidget
 
@@ -36,6 +36,7 @@ class WaveformView(QWidget):
         self._playhead_ms = 0
         self._zoom = 1.0
         self.setMinimumHeight(120)
+        self.setFocusPolicy(Qt.ClickFocus)
 
     def set_data(self, peaks: np.ndarray, duration_ms: int) -> None:
         self._peaks = peaks

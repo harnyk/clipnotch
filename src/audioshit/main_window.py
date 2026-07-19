@@ -1,4 +1,5 @@
 from pathlib import Path
+import os
 import wave
 
 from PySide6.QtCore import Qt, QEvent
@@ -12,6 +13,7 @@ from PySide6.QtWidgets import (
     QComboBox,
     QScrollArea,
     QFileDialog,
+    QMessageBox,
 )
 
 from audioshit.marker_model import MarkerModel
@@ -26,6 +28,8 @@ SMALL_STEP_MS = 100
 LARGE_STEP_MS = 1000
 WAVEFORM_BUCKETS = 2000
 ZOOM_STEP = 1.5
+MIN_ZOOM = 0.25
+MAX_ZOOM = 8.0
 
 
 def _wav_duration_ms(path: Path) -> int:
@@ -85,6 +89,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(container)
 
         self.waveform_view.position_clicked.connect(self._set_playhead)
+        self.player.position_changed.connect(self._on_player_position_changed)
 
         self.interval_table.setFocusPolicy(Qt.NoFocus)
         self.export_button.setFocusPolicy(Qt.NoFocus)
@@ -99,19 +104,35 @@ class MainWindow(QMainWindow):
             return
         dest_dir = Path.cwd() / ".audioshit_downloads"
         self._worker = DownloadWorker(url, dest_dir, self)
-        self._worker.finished.connect(self.load_audio_file)
+        self._worker.converted.connect(self.load_audio_file)
+        self._worker.failed.connect(self._on_download_failed)
         self._worker.start()
 
+    def _on_download_failed(self, message: str) -> None:
+        QMessageBox.critical(self, "Download failed", message)
+
     def load_audio_file(self, wav_path: Path) -> None:
+        try:
+            source_name = wav_path.stem
+            duration_ms = _wav_duration_ms(wav_path)
+            marker_model = MarkerModel(duration_ms)
+            peaks = compute_peaks(wav_path, WAVEFORM_BUCKETS)
+        except Exception as exc:
+            QMessageBox.critical(self, "Failed to load audio", str(exc))
+            return
+
         self.wav_path = wav_path
-        self.source_name = wav_path.stem
-        duration_ms = _wav_duration_ms(wav_path)
-        self.marker_model = MarkerModel(duration_ms)
+        self.source_name = source_name
+        self.marker_model = marker_model
         self.playhead_ms = 0
         self.player.load(wav_path)
 
-        peaks = compute_peaks(wav_path, WAVEFORM_BUCKETS)
         self.waveform_view.set_data(peaks, duration_ms)
+        self._refresh_views()
+        self.waveform_view.setFocus()
+
+    def _on_player_position_changed(self, position_ms: int) -> None:
+        self.playhead_ms = position_ms
         self._refresh_views()
 
     def _refresh_views(self) -> None:
@@ -135,13 +156,30 @@ class MainWindow(QMainWindow):
         if self.marker_model is None or self.wav_path is None:
             return
         ext = self.format_combo.currentText()
-        export_intervals(
-            self.wav_path,
-            self.source_name,
-            self.marker_model.intervals(),
-            self.output_dir,
-            ext,
-        )
+
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        if not os.access(self.output_dir, os.W_OK):
+            QMessageBox.critical(self, "Export failed", f"Cannot write to {self.output_dir}")
+            return
+
+        try:
+            exported = export_intervals(
+                self.wav_path,
+                self.source_name,
+                self.marker_model.intervals(),
+                self.output_dir,
+                ext,
+            )
+        except Exception as exc:
+            QMessageBox.critical(self, "Export failed", str(exc))
+            return
+
+        if not exported:
+            QMessageBox.information(self, "Export complete", "No intervals were marked for export.")
+        else:
+            QMessageBox.information(
+                self, "Export complete", f"Exported {len(exported)} file(s) to {self.output_dir}"
+            )
 
     def event(self, event) -> bool:
         # Qt's focus-chain machinery intercepts Tab/Backtab in QWidget.event()
@@ -172,7 +210,7 @@ class MainWindow(QMainWindow):
             self.playhead_ms = max(0, self.playhead_ms - step)
             self._refresh_views()
         elif key == Qt.Key_Space:
-            if self.player._player.isPlaying():
+            if self.player.is_playing():
                 self.player.stop()
             else:
                 self.player.play_from(self.playhead_ms)
@@ -200,10 +238,10 @@ class MainWindow(QMainWindow):
         elif ctrl and key == Qt.Key_S:
             self._on_export_clicked()
         elif key in (Qt.Key_Plus, Qt.Key_Equal):
-            self._zoom *= ZOOM_STEP
+            self._zoom = max(MIN_ZOOM, min(MAX_ZOOM, self._zoom * ZOOM_STEP))
             self.waveform_view.set_zoom(self._zoom)
         elif key == Qt.Key_Minus:
-            self._zoom /= ZOOM_STEP
+            self._zoom = max(MIN_ZOOM, min(MAX_ZOOM, self._zoom / ZOOM_STEP))
             self.waveform_view.set_zoom(self._zoom)
         else:
             super().keyPressEvent(event)
