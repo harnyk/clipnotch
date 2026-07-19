@@ -231,6 +231,12 @@ class MainWindow(QMainWindow):
                 self.player.stop()
                 self.playhead_ms = self.nav_point_ms
                 self._refresh_views()
+            elif self.loop_mode:
+                interval = self.marker_model.interval_containing(self.playhead_ms)
+                if interval is not None:
+                    self.player.play_looping(self.playhead_ms, interval.start_ms, interval.end_ms)
+                else:
+                    self.player.play_from(self.playhead_ms)
             else:
                 self.player.play_from(self.playhead_ms)
         elif key == Qt.Key_S and not ctrl:
@@ -266,14 +272,8 @@ class MainWindow(QMainWindow):
                 self.playhead_ms = target
                 self._refresh_views()
         elif key in (Qt.Key_Return, Qt.Key_Enter):
-            interval = self.marker_model.interval_containing(self.playhead_ms)
-            if interval is not None:
-                self.nav_point_ms = self.playhead_ms
-                self._refresh_views()
-                if self.loop_mode:
-                    self.player.play_looping_range(interval.start_ms, interval.end_ms)
-                else:
-                    self.player.play_once_range(interval.start_ms, interval.end_ms)
+            self.nav_point_ms = self.playhead_ms
+            self._refresh_views()
         elif key == Qt.Key_U:
             self.loop_mode = not self.loop_mode
             self.setWindowTitle(f"{WINDOW_TITLE} [loop]" if self.loop_mode else WINDOW_TITLE)

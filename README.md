@@ -32,19 +32,19 @@ Downloaded audio is cached by a hash of the URL under a temp directory (`$TMPDIR
 |---|---|
 | `←` / `→` | Move playhead by a small step (100 ms) |
 | `Shift + ←` / `Shift + →` | Move playhead by a large step (1000 ms) |
-| `Space` | Play / stop from the current position (stop returns to the nav point, shown in blue) |
+| `Space` | Play from the current position. If `U` (loop) is on, playback loops within the interval containing the playhead once it reaches that interval's end; otherwise it just keeps playing. Pressing `Space` again stops and rewinds to the nav point (blue) |
 | `S` | Stop in place — stop playback without rewinding to the nav point and without moving it |
 | `M` | Add a marker at the current position |
 | `Backspace` / `Delete` | Remove the nearest marker |
 | `Tab` | Jump to the next marker |
 | `Shift + Tab` | Jump to the previous marker |
 | `K` / `L` | Jump to the previous / next interval (covers the first and last interval too, unlike Tab); also sets the nav point there |
-| `Enter` | Preview the current interval (once, or looping if `U` is on); sets the nav point to the current position |
-| `U` | Toggle loop mode for `Enter`'s interval preview (window title shows `[loop]` when on) |
+| `Enter` | Pin the nav point (blue) to the current playhead position — does not play anything |
+| `U` | Toggle loop mode for `Space` (window title shows `[loop]` when on) |
 | `X` | Toggle the current interval for export |
 | `Ctrl + S` | Export all included intervals |
 | `+` / `-` | Zoom the waveform |
 
 Clicking the waveform moves the playhead and returns keyboard focus to the app, so shortcuts keep working afterward. The waveform view auto-scrolls to keep the playhead in view.
 
-The **nav point** (blue line) is the position `Space` returns playback to when stopping. It's only set by `Enter` (interval preview) or by jumping to an interval with `K`/`L` — plain navigation (arrows, Tab) and `Space`/`S` never move it.
+The **nav point** (blue line) is the position `Space` returns playback to when stopping. It's only set by `Enter` or by jumping to an interval with `K`/`L` — plain navigation (arrows, Tab) and `Space`/`S` never move it.

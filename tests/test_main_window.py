@@ -167,7 +167,7 @@ def test_ctrl_s_still_exports_instead_of_stopping_in_place(qtbot, test_wav_path,
     assert window.nav_point_ms == 0
 
 
-def test_enter_sets_nav_point_to_current_playhead(qtbot, test_wav_path):
+def test_enter_only_sets_nav_point_and_does_not_play(qtbot, test_wav_path):
     from unittest.mock import patch
 
     window = _load_window_with_tone(qtbot, test_wav_path)
@@ -175,10 +175,12 @@ def test_enter_sets_nav_point_to_current_playhead(qtbot, test_wav_path):
     window.playhead_ms = 200
     window.nav_point_ms = 999
 
-    with patch.object(window.player, "play_once_range") as mock_preview:
+    with patch.object(window.player, "play_from") as mock_play_from, \
+         patch.object(window.player, "play_looping") as mock_play_looping:
         QTest.keyClick(window, Qt.Key_Return)
 
-    mock_preview.assert_called_once_with(0, 500)
+    mock_play_from.assert_not_called()
+    mock_play_looping.assert_not_called()
     assert window.nav_point_ms == 200
 
 
@@ -193,23 +195,24 @@ def test_u_key_toggles_loop_mode(qtbot, test_wav_path):
     assert window.loop_mode is False
 
 
-def test_enter_uses_looping_playback_when_loop_mode_is_on(qtbot, test_wav_path):
+def test_space_loops_within_current_interval_when_loop_mode_is_on(qtbot, test_wav_path):
     from unittest.mock import patch
 
     window = _load_window_with_tone(qtbot, test_wav_path)
     window.marker_model.add_marker(500)
-    window.playhead_ms = 200
+    window.playhead_ms = 200  # mid-interval, not at its start
     window.loop_mode = True
 
-    with patch.object(window.player, "play_looping_range") as mock_loop, \
-         patch.object(window.player, "play_once_range") as mock_once:
-        QTest.keyClick(window, Qt.Key_Return)
+    with patch.object(window.player, "is_playing", return_value=False), \
+         patch.object(window.player, "play_looping") as mock_loop, \
+         patch.object(window.player, "play_from") as mock_play_from:
+        QTest.keyClick(window, Qt.Key_Space)
 
-    mock_loop.assert_called_once_with(0, 500)
-    mock_once.assert_not_called()
+    mock_loop.assert_called_once_with(200, 0, 500)
+    mock_play_from.assert_not_called()
 
 
-def test_enter_uses_single_shot_playback_when_loop_mode_is_off(qtbot, test_wav_path):
+def test_space_plays_normally_past_interval_when_loop_mode_is_off(qtbot, test_wav_path):
     from unittest.mock import patch
 
     window = _load_window_with_tone(qtbot, test_wav_path)
@@ -217,11 +220,13 @@ def test_enter_uses_single_shot_playback_when_loop_mode_is_off(qtbot, test_wav_p
     window.playhead_ms = 200
     assert window.loop_mode is False
 
-    with patch.object(window.player, "play_looping_range") as mock_loop, \
-         patch.object(window.player, "play_once_range") as mock_once:
-        QTest.keyClick(window, Qt.Key_Return)
+    with patch.object(window.player, "is_playing", return_value=False), \
+         patch.object(window.player, "play_looping") as mock_loop, \
+         patch.object(window.player, "play_from") as mock_play_from:
+        QTest.keyClick(window, Qt.Key_Space)
 
-    mock_once.assert_called_once_with(0, 500)
+    mock_play_from.assert_called_once_with(200)
+    mock_loop.assert_not_called()
     mock_loop.assert_not_called()
 
 

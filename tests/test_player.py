@@ -15,47 +15,37 @@ def test_load_sets_source(qtbot, test_wav_path):
     assert player._player.source().isLocalFile()
 
 
-def test_play_once_range_sets_stop_position(qtbot, test_wav_path):
+def test_play_from_seeks_and_plays(qtbot, test_wav_path):
     player = AudioPlayer()
     _load_and_wait_ready(qtbot, player, test_wav_path)
     with patch.object(player._player, "setPosition") as mock_set_position, \
          patch.object(player._player, "play") as mock_play:
-        player.play_once_range(200, 700)
-        mock_set_position.assert_called_once_with(200)
+        player.play_from(300)
+        mock_set_position.assert_called_once_with(300)
         mock_play.assert_called_once()
-    assert player._stop_at_ms == 700
+    assert player._loop_range is None
 
 
-def test_position_changed_stops_player_at_target():
-    player = AudioPlayer()
-    player._stop_at_ms = 700
-    with patch.object(player._player, "stop") as mock_stop:
-        player._on_position_changed(699)
-        mock_stop.assert_not_called()
-        player._on_position_changed(700)
-        mock_stop.assert_called_once()
-    assert player._stop_at_ms is None
-
-
-def test_play_from_clears_stop_position(qtbot, test_wav_path):
-    player = AudioPlayer()
-    _load_and_wait_ready(qtbot, player, test_wav_path)
-    player._stop_at_ms = 500
-    with patch.object(player._player, "setPosition"), patch.object(player._player, "play"):
-        player.play_from(100)
-    assert player._stop_at_ms is None
-
-
-def test_play_looping_range_sets_loop_range_not_stop_at(qtbot, test_wav_path):
+def test_play_looping_seeks_to_given_position_not_loop_start(qtbot, test_wav_path):
+    # play_looping starts wherever the caller says (e.g. the current playhead,
+    # which may be mid-interval), not necessarily at loop_start_ms.
     player = AudioPlayer()
     _load_and_wait_ready(qtbot, player, test_wav_path)
     with patch.object(player._player, "setPosition") as mock_set_position, \
          patch.object(player._player, "play") as mock_play:
-        player.play_looping_range(200, 700)
-        mock_set_position.assert_called_once_with(200)
+        player.play_looping(450, 200, 700)
+        mock_set_position.assert_called_once_with(450)
         mock_play.assert_called_once()
-    assert player._stop_at_ms is None
     assert player._loop_range == (200, 700)
+
+
+def test_play_from_clears_loop_range(qtbot, test_wav_path):
+    player = AudioPlayer()
+    _load_and_wait_ready(qtbot, player, test_wav_path)
+    player._loop_range = (0, 100)
+    with patch.object(player._player, "setPosition"), patch.object(player._player, "play"):
+        player.play_from(300)
+    assert player._loop_range is None
 
 
 def test_position_changed_seeks_back_to_loop_start_without_stopping():
@@ -70,15 +60,6 @@ def test_position_changed_seeks_back_to_loop_start_without_stopping():
         mock_stop.assert_not_called()
     # Looping keeps going: the loop range is not cleared after wrapping.
     assert player._loop_range == (200, 700)
-
-
-def test_play_once_range_clears_loop_range(qtbot, test_wav_path):
-    player = AudioPlayer()
-    _load_and_wait_ready(qtbot, player, test_wav_path)
-    player._loop_range = (0, 100)
-    with patch.object(player._player, "setPosition"), patch.object(player._player, "play"):
-        player.play_once_range(200, 700)
-    assert player._loop_range is None
 
 
 def test_stop_clears_loop_range(qtbot, test_wav_path):
@@ -103,7 +84,7 @@ def test_stop_does_not_emit_position_changed(qtbot, test_wav_path):
 
 def test_seek_and_play_defers_when_media_not_yet_loaded(qtbot, test_wav_path):
     # Regression test: QMediaPlayer.setPosition() is silently dropped while
-    # mediaStatus is still LoadingMedia, which used to make Enter/Space start
+    # mediaStatus is still LoadingMedia, which used to make Space start
     # playback from position 0 instead of the requested position. The fix
     # defers the seek+play until mediaStatusChanged reports the media is ready.
     player = AudioPlayer()
@@ -112,7 +93,7 @@ def test_seek_and_play_defers_when_media_not_yet_loaded(qtbot, test_wav_path):
     with patch.object(player._player, "mediaStatus", return_value=QMediaPlayer.MediaStatus.LoadingMedia), \
          patch.object(player._player, "setPosition") as mock_set_position, \
          patch.object(player._player, "play") as mock_play:
-        player.play_once_range(2000, 4000)
+        player.play_from(2000)
 
         mock_set_position.assert_not_called()
         mock_play.assert_not_called()
